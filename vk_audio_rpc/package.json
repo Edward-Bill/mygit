@@ -18,8 +18,10 @@
     "test": "npm start main.js"
   },
   "dependencies": {
+    "body-parser": "^2.2.0",
     "discord-rich-presence": "^0.0.8",
     "discord-rpc": "^4.0.1",
-    "express": "^5.1.0"
+    "express": "^5.1.0",
+    "node-fetch": "^2.7.0"
   }
 }

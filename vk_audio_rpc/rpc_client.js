@@ -53,7 +53,7 @@
 
         if (!lastTrack || lastTrack.title !== track.title || lastTrack.artist !== track.artist) {
             lastTrack = track;
-            console.log("🎵 VK Track:", track);
+            console.log("Track:", track);
 
             fetch(SERVER_URL + "/update", {
                 method: "POST",
@@ -69,4 +69,5 @@
         }
     }, 3000);
 })();
+
 
