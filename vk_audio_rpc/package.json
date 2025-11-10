@@ -1,0 +1,25 @@
+{
+  "name": "vk_audio_rpc",
+  "version": "1.0.0",
+  "description": "my simple audio rpc",
+  "homepage": "https://github.com/Edward-Bill/mygit#readme",
+  "bugs": {
+    "url": "https://github.com/Edward-Bill/mygit/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Edward-Bill/mygit.git"
+  },
+  "license": "ISC",
+  "author": "exec4tble",
+  "type": "commonjs",
+  "main": "main.js",
+  "scripts": {
+    "test": "npm start main.js"
+  },
+  "dependencies": {
+    "discord-rich-presence": "^0.0.8",
+    "discord-rpc": "^4.0.1",
+    "express": "^5.1.0"
+  }
+}
