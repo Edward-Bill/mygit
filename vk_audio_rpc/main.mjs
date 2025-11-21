@@ -59,7 +59,7 @@ app.post("/update", (req, res) => {
     const thumb = body.thumbnail.split(",")[1];
     const buttons = body.trackUrl
         ? [{ label: "Listen", url: `https://vk.com/audio${body.trackUrl}` }]
-        : [];
+        : null;
 
     const data = {
         state: body.artist,
@@ -68,16 +68,17 @@ app.post("/update", (req, res) => {
         endTimestamp: Math.floor(body.startTime / 1000) + body.duration,
         instance: true,
         type: 2,
-        largeImageKey: thumb.length > 300 ? "default_image" : thumb,
+        largeImageKey: thumb,
         largeImageText: "VK RPC by exec4tble",
-        buttons
     };
+    
+    if (buttons) data.buttons = buttons;
 
     if (discord) {
         try {
             discord.updatePresence(data);
         } catch (err) {
-            console.log("⚠️ Error updating Discord RPC, resetting connection...");
+            console.log("Error updating Discord RPC, resetting connection...");
             discord = null;
         }
     } else {

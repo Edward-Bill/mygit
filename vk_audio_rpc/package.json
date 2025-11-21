@@ -13,9 +13,9 @@
   "license": "ISC",
   "author": "exec4tble",
   "type": "commonjs",
-  "main": "main.js",
+  "main": "main.mjs",
   "scripts": {
-    "test": "npm start main.js"
+    "start": "npm main.mjs"
   },
   "dependencies": {
     "body-parser": "^2.2.0",

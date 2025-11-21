@@ -38,7 +38,7 @@
                 duration: track[5],
                 startTime: Date.now(),
                 thumbnail: track[14],
-                trackUrl: track[26]
+                trackUrl: track[26].split(",")[0]
             };
         } catch (e) {
             return null;
@@ -53,8 +53,8 @@
 
         if (!lastTrack || lastTrack.title !== track.title || lastTrack.artist !== track.artist) {
             lastTrack = track;
-            console.log("Track:", track);
-
+            track.thumbnail = track.thumbnail.length > 300 ? track.thumbnail : "default_image";
+            
             fetch(SERVER_URL + "/update", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -66,6 +66,7 @@
                 }
                 console.error("RPC server error:", err)
             });
+            console.log("Track sent:", track);
         }
     }, 3000);
 })();
