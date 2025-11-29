@@ -168,48 +168,13 @@ app.get("/getClient", (req, res) => {
     }
 });
 
-app.get("/image", async (req, res) => {
-    try {
-        const imageUrl = req.query.url;
-        const referer = req.query.referer || "http://localhost/";
-        
-        if (!imageUrl) return res.status(400).json({ error: 'url parameter required' });
-
-        console.log(`[/image] Fetching image from: ${imageUrl} with referer: ${referer}`);
-
-        const response = await fetch(imageUrl, {
-            headers: {
-                "Referer": referer,
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
-            },
-            timeout: 10000
-        });
-
-        if (!response.ok) {
-            console.error(`[/image] Failed to fetch image: ${response.status} ${response.statusText}`);
-            return res.status(response.status).json({ error: `Failed to fetch image: ${response.statusText}` });
-        }
-
-        const contentType = response.headers.get('content-type');
-        res.setHeader('Content-Type', contentType || 'application/octet-stream');
-        res.setHeader('Cache-Control', 'public, max-age=3600');
-        
-        response.body.pipe(res);
-    } catch (err) {
-        console.error('[/image] Error:', err);
-        res.status(500).json({ error: 'Failed to proxy image' });
-    }
-});
-
-// --- WebSocket support for loaders (heartbeat + single loader per site) ---
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server, path: '/ws' });
 
-// appId -> { socket, site, lastHeartbeat }
 const wsClients = new Map();
 
-const HEARTBEAT_TIMEOUT = 10000; // 10s
-const HEARTBEAT_CHECK_INTERVAL = 5000; // 5s
+const HEARTBEAT_TIMEOUT = 10000;
+const HEARTBEAT_CHECK_INTERVAL = 5000;
 
 wss.on('connection', (ws, req) => {
     console.log('[WS] connection from', req.socket.remoteAddress);
@@ -232,9 +197,7 @@ wss.on('connection', (ws, req) => {
                 return;
             }
 
-            // store/replace client for this appId
             wsClients.set(appId, { socket: ws, site, lastHeartbeat: Date.now() });
-            // ensure discord client exists
             getOrCreateClient(appId);
             ws.send(JSON.stringify({ type: 'registered', appId }));
             console.log(`[WS] registered loader for site=${site} appId=${appId}`);
@@ -242,7 +205,6 @@ wss.on('connection', (ws, req) => {
         }
 
         if (msg.type === 'heartbeat') {
-            // update lastHeartbeat for the socket's appId
             for (const [appId, info] of wsClients.entries()) {
                 if (info.socket === ws) {
                     info.lastHeartbeat = Date.now();
@@ -254,7 +216,6 @@ wss.on('connection', (ws, req) => {
     });
 
     ws.on('close', () => {
-        // find and remove ws client and clear presence for that appId
         for (const [appId, info] of wsClients.entries()) {
             if (info.socket === ws) {
                 console.log(`[WS] socket closed for appId=${appId}, clearing presence`);
@@ -288,7 +249,6 @@ wss.on('connection', (ws, req) => {
     ws.on('error', (err) => console.error('[WS] socket error', err));
 });
 
-// Periodically check heartbeats and clear stale clients
 setInterval(() => {
     const now = Date.now();
     for (const [appId, info] of wsClients.entries()) {
@@ -321,30 +281,24 @@ setInterval(() => {
     }
 }, HEARTBEAT_CHECK_INTERVAL);
 
-// continue with /clear endpoint
 app.post("/clear", (req, res) => {
     const body = req.body || {};
     
-    // Priority 1: site from request body
     let hostname = body.site || '';
     
-    // Priority 2: extract from Origin header
     if (!hostname) {
         const origin = req.get('origin') || '';
         try {
             if (origin) hostname = new URL(origin).hostname;
         } catch (e) {
-            // fallthrough
         }
     }
     
-    // Priority 3: extract from Referer header
     if (!hostname) {
         const referer = req.get('referer') || '';
         try {
             if (referer) hostname = new URL(referer).hostname;
         } catch (e) {
-            // fallthrough
         }
     }
 
@@ -371,7 +325,6 @@ app.post("/clear", (req, res) => {
             console.log(`[/clear] Error clearing RPC for ${appId}:`, err);
         }
 
-        // delayed disconnect for that specific client
         const clientRef = client;
         setTimeout(() => {
             try {
