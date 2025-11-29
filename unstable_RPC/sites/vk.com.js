@@ -1,14 +1,3 @@
-// ==UserScript==
-// @name         VK Music RPC
-// @namespace    http://tampermonkey.net/
-// @version      1.0.0
-// @description  localhost RPC for VK Music
-// @author       exec4tble
-// @match        https://vk.com/*
-// @grant        none
-// @connect      localhost
-// ==/UserScript==
-
 (function () {
     'use strict';
     if (window.VKRPC) return
@@ -54,11 +43,44 @@
         if (!lastTrack || lastTrack.title !== track.title || lastTrack.artist !== track.artist) {
             lastTrack = track;
             track.thumbnail = track.thumbnail.length > 300 ? track.thumbnail : "default_image";
-            
+
+            const thumb = track.thumbnail.split(",")[1];
+            const buttons = track.trackUrl
+                ? [{ label: "Listen", url: `https://vk.com/audio${track.trackUrl}` }]
+                : null;
+
+            let imageKey = thumb;
+
+            let data = {
+                state: track.artist,
+                details: track.title.length < 2 ? `  ${track.title}` : track.title,
+                startTimestamp: Math.floor(track.startTime / 1000),
+                endTimestamp: Math.floor(track.startTime / 1000) + Math.floor(track.duration),
+                instance: true,
+                type: 2,
+                largeImageKey: imageKey,
+                largeImageText: "RPC by exec4tble",
+            };
+
+            if (buttons) data.buttons = buttons;
+
+            const payload = {
+                site: "vk.com",
+                state: track.artist,
+                details: track.title.length < 2 ? `  ${track.title}` : track.title,
+                startTimestamp: Math.floor(track.startTime / 1000),
+                endTimestamp: Math.floor(track.startTime / 1000) + Math.floor(track.duration),
+                instance: true,
+                type: 2,
+                largeImageKey: imageKey,
+                largeImageText: "RPC by exec4tble",
+            };
+            if (buttons) payload.buttons = buttons;
+
             fetch(SERVER_URL + "/update", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(track)
+                body: JSON.stringify(payload)
             }).catch(err => {
                 if (toString(err).includes("CORS")) {
                     console.error("couldnt connect to server backend or CORS are disabled")

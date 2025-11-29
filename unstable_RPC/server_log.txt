@@ -1,0 +1,44 @@
+Loaded appids map for sites: [ 'animelib.org', 'vk.com' ]
+Listening on http://127.0.0.1:3020 (CORS + WebSocket enabled)
+[WS] connection from ::ffff:127.0.0.1
+Connected to Discord RPC for appId=1296764051468189717
+[WS] registered loader for site=vk.com appId=1296764051468189717
+Client requested: vk.com
+Connected to Discord RPC for appId=1444005910195474542
+[/update] site/hostname="vk.com" тЖТ appId="1296764051468189717"
+[/update] Updated presence for appId="1296764051468189717"
+[/update] site/hostname="vk.com" тЖТ appId="1296764051468189717"
+[/update] Updated presence for appId="1296764051468189717"
+[/update] site/hostname="vk.com" тЖТ appId="1296764051468189717"
+[/update] Updated presence for appId="1296764051468189717"
+Unhandled Rejection at: Promise {
+  <rejected> Error: child "activity" fails because [child "buttons" fails because ["buttons" must be an array]]
+      at RPCClient._onRpcMessage (C:\Users\jenia\yesdaddy\Programs\VS\GIT\mygit\unstable_RPC\node_modules\discord-rpc\src\client.js:178:19)
+      at IPCTransport.emit (node:events:508:28)
+      at C:\Users\jenia\yesdaddy\Programs\VS\GIT\mygit\unstable_RPC\node_modules\discord-rpc\src\transports\ipc.js:138:18
+      at decode (C:\Users\jenia\yesdaddy\Programs\VS\GIT\mygit\unstable_RPC\node_modules\discord-rpc\src\transports\ipc.js:92:5)
+      at Socket.<anonymous> (C:\Users\jenia\yesdaddy\Programs\VS\GIT\mygit\unstable_RPC\node_modules\discord-rpc\src\transports\ipc.js:120:7)
+      at Socket.emit (node:events:508:28)
+      at emitReadable_ (node:internal/streams/readable:832:12)
+      at process.processTicksAndRejections (node:internal/process/task_queues:89:21) {
+    code: 4000,
+    data: {
+      code: 4000,
+      message: 'child "activity" fails because [child "buttons" fails because ["buttons" must be an array]]'
+    }
+  }
+} reason: Error: child "activity" fails because [child "buttons" fails because ["buttons" must be an array]]
+    at RPCClient._onRpcMessage (C:\Users\jenia\yesdaddy\Programs\VS\GIT\mygit\unstable_RPC\node_modules\discord-rpc\src\client.js:178:19)
+    at IPCTransport.emit (node:events:508:28)
+    at C:\Users\jenia\yesdaddy\Programs\VS\GIT\mygit\unstable_RPC\node_modules\discord-rpc\src\transports\ipc.js:138:18
+    at decode (C:\Users\jenia\yesdaddy\Programs\VS\GIT\mygit\unstable_RPC\node_modules\discord-rpc\src\transports\ipc.js:92:5)
+    at Socket.<anonymous> (C:\Users\jenia\yesdaddy\Programs\VS\GIT\mygit\unstable_RPC\node_modules\discord-rpc\src\transports\ipc.js:120:7)
+    at Socket.emit (node:events:508:28)
+    at emitReadable_ (node:internal/streams/readable:832:12)
+    at process.processTicksAndRejections (node:internal/process/task_queues:89:21) {
+  code: 4000,
+  data: {
+    code: 4000,
+    message: 'child "activity" fails because [child "buttons" fails because ["buttons" must be an array]]'
+  }
+}
