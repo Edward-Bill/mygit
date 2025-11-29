@@ -10,7 +10,6 @@
 // ==/UserScript==
 
 (function () {
-    // Avoid running inside iframes and ensure single loader per top window
     if (window.top !== window.self) return;
     if (window.RPC_WS_LOADER) return;
     window.RPC_WS_LOADER = null;
@@ -40,16 +39,13 @@
             ws.addEventListener('open', () => {
                 console.log('RPC WS connected');
                 window.RPC_WS_LOADER = ws;
-                // register this loader
                 const siteName = window.location.hostname;
                 ws.send(JSON.stringify({ type: 'register', site: siteName }));
 
-                // heartbeat
                 hbInterval = setInterval(() => {
                     if (ws && ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify({ type: 'heartbeat' }));
                 }, 4000);
 
-                // load the per-site client script once
                 loadClient();
             });
 
@@ -58,7 +54,6 @@
                     const msg = JSON.parse(ev.data);
                     if (msg.type === 'registered') console.log('RPC registered for appId', msg.appId);
                     if (msg.type === 'clear') {
-                        // server asked to clear presence; try calling clear API
                         fetch(`${SERVER_URL}/clear`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -72,7 +67,6 @@
                 console.log('RPC WS closed');
                 window.RPC_WS_LOADER = null;
                 if (hbInterval) clearInterval(hbInterval);
-                // reconnect after delay
                 setTimeout(connectWS, 3000);
             });
 
