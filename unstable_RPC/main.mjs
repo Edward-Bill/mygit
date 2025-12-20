@@ -114,7 +114,7 @@ app.post("/update", (req, res) => {
     }
 
     const appId = (hostname && appids[hostname]) ? appids[hostname] : defaultAppId;
-    console.log(`[/update] site/hostname="${hostname}" → appId="${appId}"`);
+    console.log(`${new Date().toISOString()} | [/update] site/hostname="${hostname}" → appId="${appId}"`);
     
     if (!appId) {
         console.error(`[/update] No appId found for hostname="${hostname}"`);
@@ -123,9 +123,9 @@ app.post("/update", (req, res) => {
 
     const now = Date.now();
     const last = lastChange.get(appId) || 0;
-    if (now - last < 2000) {
-        return res.status(429).json({ ok: false, error: 'Too many requests' });
-    }
+    // if (now - last < 5000) {
+    //     return res.status(429).json({ ok: false, error: 'Sending requests too fast. ples slow down' });
+    // }
     lastChange.set(appId, now);
 
     const client = getOrCreateClient(appId);
@@ -136,6 +136,8 @@ app.post("/update", (req, res) => {
     try {
         const presenceData = { ...body };
         delete presenceData.site;
+
+        //console.log(presenceData);
 
         if (presenceData.buttons && !Array.isArray(presenceData.buttons)) {
             console.log(`[/update] Removing invalid buttons field for appId=${appId}`);
