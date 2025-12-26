@@ -43,7 +43,6 @@
 
     let lastTrack = null;
     let basePayload = null;
-    // null = unknown, true = playing and last update sent as playing, false = paused and pause update already sent
     let lastIsPlaying = null;
 
     setInterval(() => {
@@ -55,7 +54,6 @@
 
         if (!lastTrack || lastTrack.title !== track.title || lastTrack.artist !== track.artist) {
             lastTrack = track;
-            // reset lastIsPlaying so that we send the appropriate state for the new track
             lastIsPlaying = null;
             track.thumbnail = track.thumbnail.length > 300 ? track.thumbnail : "default_image";
 
