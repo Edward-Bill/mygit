@@ -3,7 +3,6 @@ import bodyParser from "body-parser";
 import fs from "fs";
 import path from "path";
 import rpc from "discord-rich-presence";
-import fetch from "node-fetch";
 import { WebSocketServer } from "ws";
 import http from "http";
 
@@ -44,11 +43,11 @@ function getOrCreateClient(appId) {
     }
 }
 
-setInterval(() => {
-    if (!clients.has(defaultAppId)) {
-        getOrCreateClient(defaultAppId);
-    }
-}, 5000);
+// setInterval(() => {
+//     if (!clients.has(defaultAppId)) {
+//         getOrCreateClient(defaultAppId);
+//     }
+// }, 5000);
 
 const CLEAR_DISCONNECT_DELAY = 200;
 
@@ -113,7 +112,7 @@ app.post("/update", (req, res) => {
         } catch (e) {}
     }
 
-    const appId = (hostname && appids[hostname]) ? appids[hostname] : defaultAppId;
+    const appId = (hostname && appids[hostname]) ? appids[hostname] : false;//defaultAppId;
     console.log(`${new Date().toISOString()} | [/update] site/hostname="${hostname}" → appId="${appId}"`);
     
     if (!appId) {
@@ -123,9 +122,6 @@ app.post("/update", (req, res) => {
 
     const now = Date.now();
     const last = lastChange.get(appId) || 0;
-    // if (now - last < 5000) {
-    //     return res.status(429).json({ ok: false, error: 'Sending requests too fast. ples slow down' });
-    // }
     lastChange.set(appId, now);
 
     const client = getOrCreateClient(appId);
@@ -136,8 +132,6 @@ app.post("/update", (req, res) => {
     try {
         const presenceData = { ...body };
         delete presenceData.site;
-
-        //console.log(presenceData);
 
         if (presenceData.buttons && !Array.isArray(presenceData.buttons)) {
             console.log(`[/update] Removing invalid buttons field for appId=${appId}`);
@@ -173,7 +167,7 @@ app.get("/getClient", (req, res) => {
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server, path: '/ws' });
 
-const wsClients = new Map();
+const wsClients = new Map(); 
 
 const HEARTBEAT_TIMEOUT = 10000;
 const HEARTBEAT_CHECK_INTERVAL = 5000;
@@ -193,7 +187,7 @@ wss.on('connection', (ws, req) => {
         if (msg.type === 'register') {
             const site = msg.site || '';
             const requestedAppId = msg.appId || null;
-            const appId = requestedAppId || (site && appids[site]) ? (requestedAppId || appids[site]) : defaultAppId;
+            const appId = requestedAppId || (site && appids[site]) ? (requestedAppId || appids[site]) : null;//defaultAppId;
             if (!appId) {
                 ws.send(JSON.stringify({ type: 'error', message: 'No appId configured' }));
                 return;
@@ -304,7 +298,7 @@ app.post("/clear", (req, res) => {
         }
     }
 
-    const appId = (hostname && appids[hostname]) ? appids[hostname] : defaultAppId;
+    const appId = (hostname && appids[hostname]) ? appids[hostname] : null;//defaultAppId;
     console.log(`[/clear] site/hostname="${hostname}" → appId="${appId}"`);
     
     if (!appId) return res.json({ ok: true });
