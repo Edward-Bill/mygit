@@ -167,7 +167,7 @@ app.get("/getClient", (req, res) => {
 const server = http.createServer(app);
 const wss = new WebSocketServer({ server, path: '/ws' });
 
-const wsClients = new Map();
+const wsClients = new Map(); 
 
 const HEARTBEAT_TIMEOUT = 10000;
 const HEARTBEAT_CHECK_INTERVAL = 5000;
