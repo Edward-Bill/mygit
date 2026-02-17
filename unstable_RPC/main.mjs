@@ -43,6 +43,7 @@ function getOrCreateClient(appId) {
     }
 }
 
+// НЕ ТРОГАТЬ, ЭТО НА НОВЫЙ ГОД
 // setInterval(() => {
 //     if (!clients.has(defaultAppId)) {
 //         getOrCreateClient(defaultAppId);
