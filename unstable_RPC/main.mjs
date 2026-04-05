@@ -5,6 +5,7 @@ import path from "path";
 import rpc from "discord-rich-presence";
 import { WebSocketServer } from "ws";
 import http from "http";
+import { spawn, execSync } from "child_process";
 
 const appidPath = path.join(process.cwd(), "appid");
 let defaultAppId = null;
@@ -345,4 +346,186 @@ app.post("/clear", (req, res) => {
 server.listen(3020, () => {
     console.log("Listening on http://127.0.0.1:3020 (CORS + WebSocket enabled)");
 });
+
+
+
+// :: playerctl watcher only for linux, and sadly, but only for AIMP, as im lazy muhahahahaah
+let playerctlProc = null;
+let lastPlayerPresence = null;
+let statusProc = null;
+let isPlaying = false;
+let playTicker = null;
+let basePresence = null;
+
+function startPlayerctlWatcher(appId) {
+    if (!appId) return;
+    if (playerctlProc) return;
+
+    try {
+        execSync('which playerctl');
+    } catch (e) {
+        console.log('playerctl not found in PATH, skipping playerctl watcher');
+        return;
+    }
+
+    const fmt = "{{playerName}}||{{xesam:title}}||{{xesam:artist}}||{{xesam:url}}||{{mpris:length}}\\n";
+    playerctlProc = spawn('playerctl', ['metadata', '--format', fmt, '--follow']);
+
+    playerctlProc.stdout.on('data', (chunk) => {
+        const raw = String(chunk);
+        raw.split(/\\r?\\n/).forEach(line => {
+            if (!line) return;
+            const parts = line.split('||');
+            const player = (parts[0]||'').trim();
+            const title = (parts[1]||'').trim();
+            const artist = (parts[2]||'').trim();
+            const url = (parts[3]||'').trim();
+            const lengthStr = (parts[4]||'').trim();
+
+            if (!player) return;
+            if (player.toLowerCase().indexOf('aimp') === -1) return;
+
+            const client = getOrCreateClient(appId);
+            if (!client) return;
+
+            let titleText = title || 'Unknown track';
+            let artistText = artist || '';
+
+            if (!artistText || artistText === '-' || artistText === '–' || artistText === '—') {
+                const parts = titleText.split(/\s[-–—]\s/);
+                if (parts.length >= 2) {
+                    artistText = parts[0].trim();
+                    titleText = parts.slice(1).join(' - ').trim();
+                }
+            }
+
+            let lengthSec = 0;
+            try { lengthSec = Math.floor(parseInt(lengthStr || '0')/1000000); } catch(e) { lengthSec = 0; }
+
+            const nowSec = Math.floor(Date.now()/1000);
+            basePresence = { name: titleText, details: artistText, state: 'unstable.AIMP', type: 2, largeImageKey: 'aimp_old' };
+            basePresence._lengthSec = lengthSec;
+
+            let presence = Object.assign({}, basePresence);
+            if (lengthSec > 0 && isPlaying) {
+                try {
+                    const posRaw = execSync('playerctl position').toString().trim();
+                    const posSec = Math.floor(parseFloat(posRaw) || 0);
+                    presence.startTimestamp = nowSec - posSec;
+                    presence.endTimestamp = presence.startTimestamp + lengthSec;
+                } catch (e) {
+                    presence.startTimestamp = nowSec;
+                    presence.endTimestamp = nowSec + lengthSec;
+                }
+            }
+
+            const key = `${presence.name}|${presence.details}|${presence.endTimestamp||0}`;
+            if (lastPlayerPresence === key) return;
+            lastPlayerPresence = key;
+
+            try {
+                client.updatePresence(presence);
+                console.log('[playerctl] Updated presence from AIMP:', presence);
+            } catch (err) {
+                console.error('[playerctl] Failed to update presence:', err);
+            }
+        });
+    });
+
+    playerctlProc.on('error', (err) => {
+        console.error('[playerctl] process error', err);
+        playerctlProc = null;
+    });
+
+    playerctlProc.on('close', (code, signal) => {
+        console.log(`[playerctl] process closed code=${code} signal=${signal}`);
+        playerctlProc = null;
+        lastPlayerPresence = null;
+        setTimeout(() => startPlayerctlWatcher(appId), 3000);
+    });
+
+    if (!statusProc) {
+        try {
+            statusProc = spawn('playerctl', ['status', '--follow']);
+        } catch (e) {
+            console.error('[playerctl status] failed to start', e);
+            statusProc = null;
+        }
+    }
+
+    if (statusProc) {
+        statusProc.stdout.on('data', (chunk) => {
+            const st = String(chunk).trim();
+            if (!st) return;
+            const wasPlaying = isPlaying;
+            isPlaying = st.toLowerCase() === 'playing';
+
+            if (isPlaying) {
+                if (playTicker) clearInterval(playTicker);
+                playTicker = setInterval(() => {
+                    if (!basePresence) return;
+                    const client = getOrCreateClient(appId || defaultAppId);
+                    if (!client) return;
+                    try {
+                        const posRaw = execSync('playerctl position').toString().trim();
+                        const posSec = Math.floor(parseFloat(posRaw) || 0);
+                        const now = Math.floor(Date.now()/1000);
+                        const dur = basePresence._lengthSec || 0;
+                        let payload = Object.assign({}, basePresence);
+                        if (dur > 0) {
+                            const start = now - posSec;
+                            payload.startTimestamp = start;
+                            payload.endTimestamp = start + dur;
+                        }
+                        client.updatePresence(payload);
+                    } catch (e) {}
+                }, 5000);
+
+                try {
+                    if (basePresence) {
+                        const client = getOrCreateClient(appId || defaultAppId);
+                        if (client) {
+                            const posRaw = execSync('playerctl position').toString().trim();
+                            const posSec = Math.floor(parseFloat(posRaw) || 0);
+                            const now = Math.floor(Date.now()/1000);
+                            const dur = basePresence._lengthSec || 0;
+                            let payload = Object.assign({}, basePresence);
+                            if (dur > 0) {
+                                const start = now - posSec;
+                                payload.startTimestamp = start;
+                                payload.endTimestamp = start + dur;
+                            }
+                            client.updatePresence(payload);
+                            console.log('[playerctl] resumed — updated presence with timestamps');
+                        }
+                    }
+                } catch (e) {}
+            } else {
+                if (playTicker) { clearInterval(playTicker); playTicker = null; }
+                if (basePresence) {
+                    const client = getOrCreateClient(appId || defaultAppId);
+                    if (client) {
+                        try {
+                            let payload = Object.assign({}, basePresence);
+                            delete payload.startTimestamp;
+                            delete payload.endTimestamp;
+                            payload.smallImageKey = 'pause';
+                            client.updatePresence(payload);
+                            console.log('[playerctl] paused — presence set to paused');
+                        } catch (e) {}
+                    }
+                }
+            }
+        });
+
+        statusProc.on('error', (err) => { console.error('[playerctl status] error', err); statusProc = null; });
+        statusProc.on('close', (code, signal) => { console.log('[playerctl status] closed', code, signal); statusProc = null; if (playTicker) { clearInterval(playTicker); playTicker = null; } setTimeout(() => startPlayerctlWatcher(appId), 3000); });
+    }
+}
+
+
+if (process.platform === 'linux') {
+    startPlayerctlWatcher(appids['vk.com'] || defaultAppId);
+    console.log('playerctl watcher initialized for Linux (if playerctl present)');
+}
 
