@@ -20,10 +20,11 @@
         if (!raw) return null;
 
         const sliderRoot = document.querySelector(
-            '[data-testid="audio-player-block-progress-bar"]'
-        );
+            '[data-testid="audioplayerplaybackbody-progressbar"]'
+            //'[data-testid="audio-player-block-progress-bar"]'
+        ) || null;
 
-        let sliderValue = sliderRoot.querySelectorAll('[role="slider"]:not([aria-readonly="true"])')[1].getAttribute('aria-valuenow');
+        let sliderValue = sliderRoot ? sliderRoot.querySelectorAll('[role="slider"]:not([aria-readonly="true"])')[1].getAttribute('aria-valuenow') : null;
 
         try {
             const track = JSON.parse(raw);
@@ -69,7 +70,7 @@
                 site: "vk.com",
                 name: track.title.length < 2 ? `  ${track.title}` : track.title,
                 details: `by ${track.artist}`,
-                state: "unstable.Music",
+                state: "/home/git/unstable.Music",
                 instance: true,
                 type: 2,
                 largeImageKey: imageKey,
