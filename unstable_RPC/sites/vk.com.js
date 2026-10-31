@@ -4,12 +4,31 @@
 
     window.VKRPC = true;
 
-    const SERVER_URL = "http://127.0.0.1:3020";
-
     function decodeHtmlEntities(str) {
         const txt = document.createElement("textarea");
         txt.innerHTML = str;
         return txt.value;
+    }
+
+    function updateMediaSession(track) {
+        document.title = `${track.title} • ${track.artist}`;
+
+        if (!("mediaSession" in navigator) || typeof MediaMetadata === "undefined") return;
+
+        const artwork = track.thumbnail
+            ? [{ src: track.thumbnail, sizes: "512x512", type: "image/png" }]
+            : [];
+
+        try {
+            navigator.mediaSession.metadata = new MediaMetadata({
+                title: track.title || "",
+                artist: track.artist || "",
+                album: "",
+                artwork
+            });
+        } catch (e) {
+            console.error("MediaMetadata error", e);
+        }
     }
 
     function getTrack() {
@@ -20,11 +39,25 @@
         if (!raw) return null;
 
         const sliderRoot = document.querySelector(
+            '[data-testid="AudioPlayerBlock_ProgressBar"], ' +
             '[data-testid="audioplayerplaybackbody-progressbar"]'
-            //'[data-testid="audio-player-block-progress-bar"]'
-        ) || null;
+        );
 
-        let sliderValue = sliderRoot ? sliderRoot.querySelectorAll('[role="slider"]:not([aria-readonly="true"])')[1].getAttribute('aria-valuenow') : null;
+        // VK's current player exposes several sliders in this block (including
+        // buffering progress). Prefer the slider explicitly labeled as playback
+        // progress; the hidden input carries its percentage value.
+        const playbackSlider = sliderRoot && sliderRoot.querySelector(
+            '[role="slider"][aria-label="Прогресс воспроизведения"]'
+        );
+        const sliderValue = playbackSlider
+            ? (playbackSlider.querySelector('[data-testid="slider_input"]')?.value ?? playbackSlider.getAttribute('aria-valuenow'))
+            : null;
+        const playbackButton = document.querySelector(
+            '[data-testid="AudioPlayerBlock_PlaybackDeck"] [data-testid="audio-player-controls-state-button"]'
+        );
+        const isPlaying = playbackButton
+            ? playbackButton.getAttribute('data-testactive') === 'true'
+            : null;
 
         try {
             const track = JSON.parse(raw);
@@ -35,7 +68,8 @@
                 startTime: Date.now(),
                 thumbnail: track[14],
                 trackUrl: track[26].split(",")[0],
-                sliderValue: sliderValue || null
+                sliderValue: sliderValue || null,
+                isPlaying
             };
         } catch (e) {
             return null;
@@ -50,8 +84,9 @@
         let track = getTrack();
         if (!track) return;
 
-        const playingRaw = localStorage.getItem('audio_playing');
-        const isPlaying = playingRaw === 'true' || playingRaw === '1';
+        updateMediaSession(track);
+        if (track.isPlaying === null) return;
+        const isPlaying = track.isPlaying;
 
         if (!lastTrack || lastTrack.title !== track.title || lastTrack.artist !== track.artist) {
             lastTrack = track;
@@ -70,7 +105,7 @@
                 site: "vk.com",
                 name: track.title.length < 2 ? `  ${track.title}` : track.title,
                 details: `by ${track.artist}`,
-                state: "/home/git/unstable.Music",
+                state: "~/git/unstable.Music",
                 instance: true,
                 type: 2,
                 largeImageKey: imageKey,
@@ -94,25 +129,19 @@
         }
 
         function sendUpdate(payload) {
-            fetch(SERVER_URL + "/update", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload)
-            }).catch(err => {
-                if (toString(err).includes("CORS")) {
-                    console.error("couldnt connect to server backend or CORS are disabled")
-                    return
-                }
-                console.error("RPC server error:", err)
-            });
+            window.postMessage(JSON.stringify({
+                type: "__UNSTABLE_RPC_UPDATE__",
+                payload
+            }), window.location.origin);
         }
 
         let payload = Object.assign({}, basePayload);
         if (isPlaying && dur > 0) {
             const now = Math.floor(Date.now() / 1000);
             const start = Math.floor(now - position);
-            payload.startTimestamp = start;
-            payload.endTimestamp = Math.floor(start + dur);
+            // discord-rpc expects Unix timestamps in milliseconds.
+            payload.startTimestamp = start * 1000;
+            payload.endTimestamp = Math.floor(start + dur) * 1000;
             // console.log("timestamps (now, start, end):", now, start, start + dur);
 
             sendUpdate(payload);
@@ -128,5 +157,3 @@
         }
     }, 4000);
 })();
-
-
